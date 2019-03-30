@@ -1,11 +1,11 @@
-lang: c
-
 matrix:
   include:
     - os: linux
+      language: c
       dist: trusty
       sudo: required
     - os: osx
+      language: objc
       osx_image: xcode10.1
       env: 
         - SDK_VERSION=10.9 SDKROOT=macosx10.9
