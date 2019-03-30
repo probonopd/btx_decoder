@@ -26,6 +26,7 @@ script:
       xcodebuild -project ./macOS/btx_decoder.xcodeproj -sdk $SDKROOT -arch x86_64
       mkdir -p out ; hdiutil create -format UDZO -srcfolder macOS/build/Release/ out/btx_decoder-$(git rev-parse --short HEAD).dmg
     elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      sudo apt-get install libsdl2-dev
       cd sdl/
       make
       cd ..
