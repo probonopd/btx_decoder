@@ -1,5 +1,9 @@
-os: osx
-language: objective-c
+os: 
+  - osx
+  - linux
+language: c
+sudo: require
+dist: trusty
 
 matrix:
   include:
@@ -21,6 +25,12 @@ script:
       set -o pipefail
       xcodebuild -project ./macOS/btx_decoder.xcodeproj -sdk $SDKROOT -arch x86_64
       mkdir -p out ; hdiutil create -format UDZO -srcfolder macOS/build/Release/ out/btx_decoder-$(git rev-parse --short HEAD).dmg
+    elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      cd sdl/
+      make
+      cd ..
+      strip btx-sdl
+      cp btx-sdl ../out/
     fi
 
 after_success:
