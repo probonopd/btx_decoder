@@ -1,15 +1,16 @@
-os: 
-  - osx
-  - linux
-language: c
-sudo: require
-dist: trusty
-
 matrix:
   include:
-    - osx_image: xcode10.1
+    - os: linux
+      dist: trusty
+      sudo: required
+    - os: osx
+      osx_image: xcode10.1
       env: 
         - SDK_VERSION=10.9 SDKROOT=macosx10.9
+
+apt:
+  packages:
+    - libsdl2-dev
 
 script:
   - |
@@ -26,7 +27,6 @@ script:
       xcodebuild -project ./macOS/btx_decoder.xcodeproj -sdk $SDKROOT -arch x86_64
       mkdir -p out ; hdiutil create -format UDZO -srcfolder macOS/build/Release/ out/btx_decoder-$(git rev-parse --short HEAD).dmg
     elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      sudo apt-get install libsdl2-dev
       cd sdl/
       make
       cd ..
