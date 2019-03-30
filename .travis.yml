@@ -33,7 +33,13 @@ script:
       cd sdl/
       make
       strip btx-sdl
-      cp btx-sdl ../out/
+      mkdir -p appdir/usr/bin ; cp btx-sdl appdir/usr/bin/
+      mkdir -p appdir/usr/share/icons/hicolor/256x256/apps ; cp bildschirmtext.png appdir/usr/share/icons/hicolor/256x256/apps/
+      mkdir -p appdir/usr/share/applications ; cp btx-sdl.desktop appdir/usr/share/applications/
+      wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
+      chmod a+x linuxdeployqt-continuous-x86_64.AppImage
+      ./linuxdeployqt-continuous-x86_64.AppImage appdir/usr/share/applications/*.desktop -appimage
+      mkdir -p ../out ; cp btx-sdl BTX*.AppImage* ../out/
       cd ..
     fi
 
