@@ -32,9 +32,9 @@ script:
     elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       cd sdl/
       make
-      cd ..
       strip btx-sdl
       cp btx-sdl ../out/
+      cd ..
     fi
 
 after_success:
