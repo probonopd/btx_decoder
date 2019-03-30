@@ -1,9 +1,11 @@
 matrix:
   include:
     - os: linux
+      lang: c
       dist: trusty
       sudo: required
     - os: osx
+      lang: objc
       osx_image: xcode10.1
       env: 
         - SDK_VERSION=10.9 SDKROOT=macosx10.9
