@@ -112,9 +112,14 @@ jobs:
       - name: Export app
         run: |
           mkdir -p export
-          cp -R build/btx_decoder.xcarchive/Products/Applications/*.app export/ 2>/dev/null || \
-          cp -R build/btx_decoder.xcarchive/Products/usr/local/bin/* export/ 2>/dev/null || \
-          cp -R build/btx_decoder.xcarchive/Products/ export/
+          if [ -d "build/btx_decoder.xcarchive/Products/Applications" ]; then
+            cp -R build/btx_decoder.xcarchive/Products/Applications/*.app export/
+          else
+            # Fallback: copy whatever is in Products
+            cp -R build/btx_decoder.xcarchive/Products/ export/
+          fi
+          echo "Export contents:"
+          ls -la export/
 
       - name: Create DMG
         run: |
