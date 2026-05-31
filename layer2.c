@@ -1,11 +1,21 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <netdb.h>
 #include <stdint.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#define bzero(b,len) memset((b), '\0', (len))
+#define usleep(x) Sleep((x)/1000)
+typedef int ssize_t;
+#else
+#include <netdb.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#endif
 
 /*
  * The original Bildschirmtext service over modem supported
@@ -30,7 +40,7 @@ int wpointer=0;
 //#define HOST "belgradstr.dyndns.org"
 #define PORT 20000 /* XXX the original port for CEPT is 20005 */
 
-static void layer2_connect2(const char *host, const int port);
+void layer2_connect2(const char *host, const int port);
 
 void layer2_connect() 
 {
@@ -41,9 +51,21 @@ void layer2_connect2(const char *host, const int port)
 {
     struct hostent *he;
     struct sockaddr_in their_addr;
+
+#ifdef _WIN32
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        fprintf(stderr, "WSAStartup failed\n");
+        exit(1);
+    }
+#endif
     
     if ((he = gethostbyname(host)) == NULL) {
+#ifdef _WIN32
+        fprintf(stderr, "gethostbyname failed\n");
+#else
         herror("gethostbyname");
+#endif
         exit(1);
     }
     

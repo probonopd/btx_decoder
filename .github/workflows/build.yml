@@ -153,11 +153,11 @@ jobs:
 
       - name: Build SDL frontend
         shell: msys2 {0}
-        run: make -C sdl
+        run: make -C sdl LINKER_FLAGS="-lSDL2 -lpthread -lws2_32"
 
       - name: Build cept_to_image
         shell: msys2 {0}
-        run: make -C to_image
+        run: make -C to_image LINKER_FLAGS="-lpthread -lws2_32"
 
       - name: Package
         shell: msys2 {0}
