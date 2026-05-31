@@ -83,7 +83,7 @@ void write_image(const uint32_t pixels[], const int w, const int h)
 }
 
 
-void decoder_thread(void *x_void_ptr)
+void *decoder_thread(void *x_void_ptr)
 {
 	char conn[256];
 	memset(conn, 0, sizeof(conn));
@@ -103,6 +103,7 @@ void decoder_thread(void *x_void_ptr)
 	while (quit) {
 		process_BTX_data();
 	}
+	return NULL;
 }
 
 //Translation table for special characters

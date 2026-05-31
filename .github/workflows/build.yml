@@ -1,0 +1,173 @@
+name: Build
+
+on:
+  push:
+    branches: ["*"]
+    tags: ["*"]
+  pull_request:
+  release:
+    types: [created]
+
+jobs:
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+        include:
+          - arch: x86_64
+            runner: ubuntu-22.04
+            appimagetool_arch: x86_64
+          - arch: aarch64
+            runner: ubuntu-22.04-arm
+            appimagetool_arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev file squashfs-tools
+
+      - name: Build SDL frontend
+        run: make -C sdl
+
+      - name: Build cept_to_image
+        run: make -C to_image
+
+      - name: Create AppDir
+        run: |
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/applications
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+
+          cp sdl/btx_sdl AppDir/usr/bin/
+          cp to_image/cept_to_image AppDir/usr/bin/
+
+          printf '[Desktop Entry]\nType=Application\nName=BTX Decoder\nExec=btx_sdl\nIcon=btx_decoder\nCategories=Network;\n' > AppDir/usr/share/applications/btx_decoder.desktop
+
+          # Create a simple icon (placeholder)
+          python3 -c "
+          import struct, zlib
+          def create_png(w, h, color):
+              def chunk(t, d):
+                  c = t + d
+                  return struct.pack('>I', len(d)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+              raw = b''
+              for y in range(h):
+                  raw += b'\x00' + bytes(color) * w
+              return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 2, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b'')
+          with open('AppDir/usr/share/icons/hicolor/256x256/apps/btx_decoder.png', 'wb') as f:
+              f.write(create_png(256, 256, (0, 100, 200)))
+          "
+
+      - name: Download appimagetool
+        run: |
+          wget -q "https://github.com/probonopd/go-appimage/releases/expanded_assets/continuous" -O - | grep -o "href=\".*appimagetool-.*-$(uname -m).AppImage\"" | head -1 | cut -d'"' -f2 | xargs -I{} wget -q "https://github.com{}" -O appimagetool
+          chmod +x appimagetool
+
+      - name: Create AppImage
+        run: |
+          ./appimagetool --appimage-extract-and-run -s deploy AppDir/usr/share/applications/btx_decoder.desktop
+          ARCH=$(uname -m) VERSION="${GITHUB_REF_NAME:-continuous}" ./appimagetool --appimage-extract-and-run AppDir
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}
+          path: |
+            *.AppImage*
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            *.AppImage*
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build macOS app
+        run: |
+          xcodebuild -project macOS/btx_decoder.xcodeproj \
+            -scheme btx_decoder \
+            -configuration Release \
+            -archivePath build/btx_decoder.xcarchive \
+            ONLY_ACTIVE_ARCH=NO \
+            ARCHS="x86_64 arm64" \
+            archive
+
+      - name: Export app
+        run: |
+          mkdir -p export
+          if [ -d "build/btx_decoder.xcarchive/Products/Applications" ]; then
+            cp -R build/btx_decoder.xcarchive/Products/Applications/*.app export/
+          else
+            # Fallback: copy whatever is in Products
+            cp -R build/btx_decoder.xcarchive/Products/ export/
+          fi
+          echo "Export contents:"
+          ls -la export/
+
+      - name: Create DMG
+        run: |
+          hdiutil create -volname "BTX Decoder" -srcfolder export -ov -format UDZO btx_decoder-macOS-universal.dmg
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-universal
+          path: btx_decoder-macOS-universal.dmg
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: btx_decoder-macOS-universal.dmg
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-SDL2
+            make
+
+      - name: Build SDL frontend
+        shell: msys2 {0}
+        run: make -C sdl LINKER_FLAGS="-lmingw32 -lSDL2main -lSDL2 -lpthread -lws2_32"
+
+      - name: Build cept_to_image
+        shell: msys2 {0}
+        run: make -C to_image LINKER_FLAGS="-lpthread -lws2_32"
+
+      - name: Package
+        shell: msys2 {0}
+        run: |
+          mkdir -p dist
+          cp sdl/btx_sdl.exe dist/
+          cp to_image/cept_to_image.exe dist/
+          # Copy required DLLs
+          ldd sdl/btx_sdl.exe | grep mingw | awk '{print $3}' | xargs -I{} cp {} dist/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x86_64
+          path: dist/
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
