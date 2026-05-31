@@ -9,7 +9,6 @@
 #include <windows.h>
 #define bzero(b,len) memset((b), '\0', (len))
 #define usleep(x) Sleep((x)/1000)
-typedef int ssize_t;
 #else
 #include <netdb.h>
 #include <sys/socket.h>
