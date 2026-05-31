@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-dev file
+          sudo apt-get install -y libsdl2-dev file squashfs-tools
 
       - name: Build SDL frontend
         run: make -C sdl
@@ -45,15 +45,7 @@ jobs:
           cp sdl/btx_sdl AppDir/usr/bin/
           cp to_image/cept_to_image AppDir/usr/bin/
 
-          cat > AppDir/usr/share/applications/btx_decoder.desktop << 'EOF'
-          [Desktop Entry]
-          Type=Application
-          Name=BTX Decoder
-          Exec=btx_sdl
-          Icon=btx_decoder
-          Categories=Network;
-          EOF
-          sed -i 's/^[[:space:]]*//' AppDir/usr/share/applications/btx_decoder.desktop
+          printf '[Desktop Entry]\nType=Application\nName=BTX Decoder\nExec=btx_sdl\nIcon=btx_decoder\nCategories=Network;\n' > AppDir/usr/share/applications/btx_decoder.desktop
 
           # Create a simple icon (placeholder)
           python3 -c "
@@ -78,7 +70,7 @@ jobs:
       - name: Create AppImage
         run: |
           ./appimagetool --appimage-extract-and-run -s deploy AppDir/usr/share/applications/btx_decoder.desktop
-          VERSION="${GITHUB_REF_NAME:-continuous}" ./appimagetool --appimage-extract-and-run AppDir
+          ARCH=$(uname -m) VERSION="${GITHUB_REF_NAME:-continuous}" ./appimagetool --appimage-extract-and-run AppDir
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -153,7 +145,7 @@ jobs:
 
       - name: Build SDL frontend
         shell: msys2 {0}
-        run: make -C sdl LINKER_FLAGS="-lSDL2 -lpthread -lws2_32"
+        run: make -C sdl LINKER_FLAGS="-lmingw32 -lSDL2main -lSDL2 -lpthread -lws2_32"
 
       - name: Build cept_to_image
         shell: msys2 {0}
